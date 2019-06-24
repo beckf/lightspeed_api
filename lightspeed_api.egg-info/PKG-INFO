@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: lightspeed-api
-Version: 0.4
+Version: 0.1
 Summary: Simple library for interacting with the Lightspeed HQ API
 Home-page: https://github.com/beckf/lightspeed_api
 Author: Forrest Beck
