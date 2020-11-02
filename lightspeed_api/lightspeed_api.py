@@ -260,3 +260,12 @@ class AccountAPI:
     def get_account_id(self):
         data = self.client.request_bucket('GET', 'https://api.lightspeedapp.com/API/Account.json')
         print(data)
+
+
+class SalesAPI:
+    def __init__(self, client):
+        self.client = client
+
+    def get_lines(self, SaleID, AccountID=None):
+        account_id = self.client.account().get_account_id() if not AccountID else AccountID
+        data = self.client.request_bucket('GET', f'https://api.lightspeedapp.com/API/{account_id}/Sale/{SaleID}/SaleLine.json')
