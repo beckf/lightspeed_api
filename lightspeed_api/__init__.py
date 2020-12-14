@@ -1,1 +1,1 @@
-from lightspeed_api.lightspeed_api import Lightspeed
+from lightspeed_api.client import Lightspeed

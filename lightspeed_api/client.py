@@ -5,8 +5,10 @@ import json
 import time
 import traceback
 from urllib import parse
+from lightspeed_api.api import ClientAPI
 
 __author__ = "Forrest Beck"
+__credits__ = ["Richard Desmarais"]
 
 
 class Lightspeed(object):
@@ -54,6 +56,7 @@ class Lightspeed(object):
             r = s.post(self.token_url, data=payload)
             json = r.json()
 
+            print(json)
             self.bearer_token = json["access_token"]
             self.session.headers.update({'Authorization': 'Bearer ' + self.bearer_token})
 
@@ -99,6 +102,9 @@ class Lightspeed(object):
         :param data: post/put data
         :return: results in json
         """
+        # Check the bearer token is up to date.
+        self.get_token()
+
         if method:
             method = method.lower()
 
@@ -249,23 +255,7 @@ class Lightspeed(object):
 
         r = self.request_bucket("delete", url)
         return r
-
-    def account(self):
-        return AccountAPI(self)
-
-class AccountAPI:
-    def __init__(self, client):
-        self.client = client
-
-    def get_account_id(self):
-        data = self.client.request_bucket('GET', 'https://api.lightspeedapp.com/API/Account.json')
-        print(data)
-
-
-class SalesAPI:
-    def __init__(self, client):
-        self.client = client
-
-    def get_lines(self, SaleID, AccountID=None):
-        account_id = self.client.account().get_account_id() if not AccountID else AccountID
-        data = self.client.request_bucket('GET', f'https://api.lightspeedapp.com/API/{account_id}/Sale/{SaleID}/SaleLine.json')
+    
+    @property
+    def api(self):
+        return ClientAPI(self)
