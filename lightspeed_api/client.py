@@ -34,7 +34,7 @@ class Lightspeed(object):
 
         # Create a new session for API calls. This will hold bearer token.
         self.session = requests.Session()
-        self.session.headers.update({'Accept': 'application/json'})
+        self.session.headers.update({'Accept': 'application/json', 'Content-Type': 'application/json'})
 
     def __repr__(self):
         return "Lightspeed API"
@@ -142,7 +142,7 @@ class Lightspeed(object):
                     tries += 1
                 else:
                     break
-
+            
             if s.status_code == 200:
                 # Update time with latest request.
                 self.rate_limit_last_request = datetime.datetime.now()
@@ -153,6 +153,7 @@ class Lightspeed(object):
 
                 return s.json()
             else:
+                print(s.json())
                 return None
 
         except requests.exceptions.HTTPError as e:

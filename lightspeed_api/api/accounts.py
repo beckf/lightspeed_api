@@ -6,5 +6,5 @@ class AccountsAPI(BaseAPI):
         data = self.client.request(
             'GET',
             'https://api.lightspeedapp.com/API/Account.json'
-        )
+        )   
         return data['Account']['accountID']

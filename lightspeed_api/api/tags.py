@@ -2,10 +2,15 @@
 from . import BaseAPI, BaseObject
 
 class Tag(BaseObject):
-    def __init__(self, obj=None, api=None):
-        if obj:
-            self.id = obj['tagID']
-            self.name = obj['name']
+    search_terms = {
+        "id": {"type": int, "ls_field": "tagID", 'optional': True},
+        "name": {"type": str, "ls_field": "name"}
+    }
+    get_function = ""           # TODO: implement
+    # TODO: default values for optionals? So they can at least reference it?
+    # TODO: when getting tags, they often don't have an ID value - what do we do then?
+    # Do we build an auto-lookup function for this in particular? Or a "cleanup" function?
+    # Do we do similar to the lazy attributes but for single items? And then it has to do different types of searching?
     
     @property
     def associated_items(self):

@@ -1,4 +1,5 @@
 
+import json
 from . import BaseAPI, BaseObject
 
 class Sale(BaseObject):
@@ -7,17 +8,29 @@ class Sale(BaseObject):
             self.id = obj['saleID']
             self.timestamp = obj['timeStamp']
             self.completed = obj['completed']
+            self.total = obj['calcTotal']
             self.customer_id = obj['customerID']
+            self.internal_note_id = "0" if "SaleNotes" not in obj or "InternalNote" not in obj["SaleNotes"] else obj["SaleNotes"]["InternalNote"]['noteID']
+            self.internal_note = "" if self.internal_note_id == "0" else obj["SaleNotes"]["InternalNote"]["note"]
+            self.printed_note_id = "0" if "SaleNotes" not in obj or "PrintedNote" not in obj["SaleNotes"] else obj["SaleNotes"]["PrintedNote"]['noteID']
+            self.printed_note = "" if self.printed_note_id == "0" else obj["SaleNotes"]["PrintedNote"]['note']
+            self._obj = obj
     
     @property
     def items(self):
         return self.api.sales.get_all_from_sale(self.id)
     
+    def has_customer(self):
+        return self.customer_id != "0"
+
     @property
     def customer(self):
         if self.customer_id == "0":
             return None
         return self.api.customers.get_customer(self.customer_id)
+    
+    def set_note(self, note):
+        return self.api.sales.set_note(self.id, note)
 
 
 class SoldItem(BaseObject):
@@ -29,6 +42,7 @@ class SoldItem(BaseObject):
             self.created_at = obj['createTime']
             self.total = obj['calcTotal']
             self.count = int(obj['unitQuantity'])
+            self._obj = obj
     
     @property
     def tags(self):
@@ -42,6 +56,10 @@ class SoldItem(BaseObject):
     # TODO: figure out how to pass in the object (if it existed) instead of re-looking it up.
     def sale(self):
         return self.api.sales.get_sale(self.sale_id)
+    
+    def set_note(self, note):
+        return self.api.sales.set_item_note(self.id, self.sale_id, note)
+    
 
 class SalesAPI(BaseAPI):
     def all(self, open=None):
@@ -50,15 +68,22 @@ class SalesAPI(BaseAPI):
         return return_list
     
     def get_sale(self, SaleID):
-        data = self.client.request('GET', f'Sale/{SaleID}.json')
+        data = self.client.request('GET', f'Sale/{SaleID}.json?load_relations=["SaleNotes"]')
         if data is None:
             return []
+        
+        return self._unwrap_sales_object(Sale, data['Sale'])
+    
+    def get_active_sale_at_register(self, RegisterID):
+        data = self.client.request('GET', f'Sale.json?registerID={RegisterID}&completed=false&orderby=timeStamp&orderby_desc=1&limit=1')
+        if data is None or 'Sale' not in data:
+            return None
         
         return self._unwrap_sales_object(Sale, data['Sale'])
 
     def get_all_from_sale(self, SaleID):
         data = self.client.request('GET', f'Sale/{SaleID}/SaleLine.json')
-        if data is None:
+        if data is None or 'SaleLine' not in data:
             return []
         
         # If there's only a single item in the return, it comes out
@@ -71,6 +96,20 @@ class SalesAPI(BaseAPI):
             return_list.append(self._unwrap_sales_object(SoldItem, obj))
         
         return return_list
+    
+    def update_sale_line(self, SaleLine):
+        self.client.request(
+            'PUT',
+            f'SaleLine/{SaleLine["saleLineID"]}.json',
+            data=json.dumps(SaleLine)
+        )
+    
+    def update_sale_line(self, SaleLine):
+        self.client.request(
+            'PUT',
+            f'SaleLine/{SaleLine["saleLineID"]}.json',
+            data=json.dumps(SaleLine)
+        )
     
     def get_sales_for_item(self, ItemID, created_at=None):
         url = f'Sale.json?load_relations=["SaleLines"]&SaleLines.itemID={ItemID}'
@@ -93,3 +132,27 @@ class SalesAPI(BaseAPI):
             return_list.append(self._unwrap_sales_object(Sale, obj))
         
         return return_list
+    
+    def set_note(self, SaleID, Note):
+        self.client.request(
+            'PUT',
+            f'Sale/{SaleID}',
+            data=json.dumps({
+                "SaleNotes":{
+                    "PrintedNote": {
+                        "note": f"{Note}"
+                    }
+                }
+            })
+        )
+    
+    def set_item_note(self, SaleItemID, SaleID, Note):
+        self.client.request(
+            'PUT',
+            f'Sale/{SaleID}/SaleLine/{SaleItemID}',
+            data=json.dumps({
+                "Note":{
+                    "note": f"{Note}"
+                }
+            })
+        )
