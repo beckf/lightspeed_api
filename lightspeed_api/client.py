@@ -3,9 +3,12 @@ import datetime
 import math
 import json
 import time
+import traceback
 from urllib import parse
+from lightspeed_api.api import ClientAPI
 
 __author__ = "Forrest Beck"
+__credits__ = ["Richard Desmarais"]
 
 
 class Lightspeed(object):
@@ -31,7 +34,7 @@ class Lightspeed(object):
 
         # Create a new session for API calls. This will hold bearer token.
         self.session = requests.Session()
-        self.session.headers.update({'Accept': 'application/json'})
+        self.session.headers.update({'Accept': 'application/json', 'Content-Type': 'application/json'})
 
     def __repr__(self):
         return "Lightspeed API"
@@ -45,7 +48,6 @@ class Lightspeed(object):
 
         try:
             payload = {
-                'refresh_token': self.config["refresh_token"],
                 'client_secret': self.config["client_secret"],
                 'client_id': self.config["client_id"],
                 'grant_type': 'authorization_code',
@@ -54,11 +56,13 @@ class Lightspeed(object):
             r = s.post(self.token_url, data=payload)
             json = r.json()
 
+            print(json)
             self.bearer_token = json["access_token"]
             self.session.headers.update({'Authorization': 'Bearer ' + self.bearer_token})
 
             return json["refresh_token"]
-        except:
+        except Exception as ex:
+            traceback.print_exc()
             return None
 
     def get_token(self):
@@ -98,6 +102,11 @@ class Lightspeed(object):
         :param data: post/put data
         :return: results in json
         """
+        # Check the bearer token is up to date.
+        self.get_token()
+
+        if method:
+            method = method.lower()
 
         if self.rate_limit_bucket_level is not None:
             units_available = float(self.rate_limit_bucket_level.split("/")[1]) - float(self.rate_limit_bucket_level.split("/")[0])
@@ -119,13 +128,13 @@ class Lightspeed(object):
         try:
             tries = 0
             while tries <= 3:
-                if method is "post":
+                if method == "post":
                     s = self.session.post(url, data=data)
-                elif method is "put":
+                elif method == "put":
                     s = self.session.put(url, data=data)
-                elif method is "delete":
+                elif method == "delete":
                     s = self.session.delete(url)
-                elif method is "get":
+                elif method == "get":
                     s = self.session.get(url)
                 # Watch for too many requests status
                 if s.status_code == 429:
@@ -133,7 +142,7 @@ class Lightspeed(object):
                     tries += 1
                 else:
                     break
-
+            
             if s.status_code == 200:
                 # Update time with latest request.
                 self.rate_limit_last_request = datetime.datetime.now()
@@ -144,6 +153,7 @@ class Lightspeed(object):
 
                 return s.json()
             else:
+                print(s.json())
                 return None
 
         except requests.exceptions.HTTPError as e:
@@ -246,3 +256,7 @@ class Lightspeed(object):
 
         r = self.request_bucket("delete", url)
         return r
+    
+    @property
+    def api(self):
+        return ClientAPI(self)
