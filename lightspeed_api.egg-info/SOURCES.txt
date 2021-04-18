@@ -2,7 +2,8 @@ README.md
 setup.cfg
 setup.py
 lightspeed_api/__init__.py
-lightspeed_api/lightspeed_api.py
+lightspeed_api/client.py
+lightspeed_api/utils.py
 lightspeed_api.egg-info/PKG-INFO
 lightspeed_api.egg-info/SOURCES.txt
 lightspeed_api.egg-info/dependency_links.txt

@@ -1,50 +1,7 @@
 
-from datetime import datetime
-
+from . import BaseAPI
+from ..models.customer import Customer
 from ..utils import search
-from . import BaseAPI, BaseObject
-from .tags import Tag
-
-
-class Customer(BaseObject):
-    # TODO: change to be "object_attributes" or something...
-    search_terms = {
-        "id": {"type": int, "ls_field": "customerID"},
-        "first_name": {"type": str, "ls_field": "firstName"},
-        "last_name": {"type": str, "ls_field": "lastName"},
-        "name": {"combine": ["first_name", "last_name"]},
-        "birthday": {"type": datetime, "ls_field": "dob", 'optional': True},
-        "is_archived": {"type": bool, "ls_field": "archived"},
-        "title": {"type": str, "ls_field": "title"},
-        "company": {"type": str, "ls_field": "company"},
-        "company_registration_number": {"type": str, "ls_field": "companyRegistrationNumber"},
-        "vat_number": {"type": str, "ls_field": "vatNumber"},
-        "created_time": {"type": datetime, "ls_field": "createTime"},
-        "last_modified_time": {"type": datetime, "ls_field": "timeStamp"},
-        "emails": {"type": str, "multifield": True, "ls_field": "Contact.Emails.ContactEmail", "ls_secondary_field": "address", "relationships": ["Contact"]},
-        "tags": {"type": Tag, "multifield": True, "ls_field": "Tags.Tag", "relationships": ["Tags"]},
-        # TODO: make these map to objects dynamically instead of just an ID
-        "credit_account_id": {"type": int, "ls_field": "creditAccountID"},
-        "customer_type_id": {"type": int, "ls_field": "customerTypeID"},
-        "discount_id": {"type": int, "ls_field": "discountID"},
-        "tax_category_id": {"type": int, "ls_field": "taxCategoryID"},
-        # TODO: Note field
-        # TODO: CustomFieldValues field
-    }
-    get_function = "CustomersAPI.get_customer"
-    
-    def save(self):
-        if self.id:
-            self.api.client.request('PUT', f'Customer/{self.id}.json', self)
-        else:
-            response = self.api.client.request('POST', f'Customer/{self.id}.json', self)
-            self.id = response["Customer"][self.search_terms['id']['ls_field']]
-
-    def __repr__(self):
-        return self.name
-
-    def __hash__(self):
-        return hash(self.name)
 
 
 class CustomersAPI(BaseAPI):

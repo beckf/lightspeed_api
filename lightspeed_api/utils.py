@@ -25,6 +25,22 @@ def convert_to_type(obj_type, obj):
     return obj
 
 
+def convert_from_type(obj_type, obj):
+    if obj_type == str:
+        return obj
+    elif obj_type == int:
+        return str(obj)
+    elif obj_type == datetime:
+        try:
+            dtobj = datetime.strftime(obj, LIGHTSPEED_DATETIME_FORMAT)
+        except ValueError:
+            raise Exception("The value %s could not be converted from a date/time object to a string" % obj)
+        return dtobj
+    
+    # All other cases just fall back to original data
+    return obj
+
+
 def get_search_string(search_terms, args_dict):
     search = ""
     for term in args_dict:
