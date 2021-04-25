@@ -1,6 +1,6 @@
 
 from . import BaseAPI
-from ..models.customer import Customer
+from ..models.customer import *
 from ..utils import search
 
 
@@ -19,7 +19,6 @@ class CustomersAPI(BaseAPI):
         if preload_relations:
             relations_str = '","'.join(preload_relations)
             url += f'?load_relations=["{relations_str}"]'
-        print(url)
         data = self.client.request('GET', url)
         if raw:
             return data['Customer']
@@ -41,3 +40,19 @@ class CustomersAPI(BaseAPI):
                     return_list.append(self._unwrap_object_to_cls(Tag, obj))
         
         return return_list
+    
+    def get_custom_field(self, CustomFieldID, raw=False):
+        data = self.client.request('GET', f'Customer/CustomField/{CustomFieldID}.json')
+        if data is None or data['@attributes']['count'] == '0':
+            return None
+        if raw:
+            return data['CustomField']
+        return self._unwrap_object_to_cls(CustomerCustomField, data['CustomField'])
+    
+    def get_customer_type(self, CustomerTypeID, raw=False):
+        data = self.client.request('GET', f'CustomerType/{CustomerTypeID}.json')
+        if data is None or data['@attributes']['count'] == '0':
+            return None
+        if raw:
+            return data['CustomerType']
+        return self._unwrap_object_to_cls(CustomerType, data['CustomerType'])
