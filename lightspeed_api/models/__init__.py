@@ -197,7 +197,7 @@ class BaseObject:
             self.id = response[key][self._object_attributes['id']['ls_field']]
     
     def __eq__(self, item):
-        if type(item) == type(self):
+        if type(item) in [type(self), LazyLookupObject]:
             if 'id' not in self._object_attributes or not getattr(item, 'id', None):
                 return self.json() == item.json()
             return item.id == self.id
@@ -267,7 +267,8 @@ class LazyLookupAttributes:
         
         if not self._was_loaded:
             parts = self._func.split('.')
-            resolved_function = getattr(API_MODULES, parts[0])
+            resolved_api_module = getattr(API_MODULES, parts[0])
+            resolved_function = resolved_api_module
             for p in parts[1:]:
                 resolved_function = getattr(resolved_function, p)
             
@@ -275,7 +276,7 @@ class LazyLookupAttributes:
                 raise Exception("Cannot resolve function '%s'" % self._func)
             
             relations = self._ls_info['relationships']
-            api = BaseAPI(self._client)
+            api = resolved_api_module(self._client)
             data = resolved_function(api, self._id, preload_relations=relations, raw=True)
             self._list = BaseObject._parse_multifield(self._ls_info, data, self._client)
             self._was_loaded = True
@@ -324,7 +325,7 @@ class LazyLookupAttributes:
     
     def __eq__(self, item):
         self._load()
-        if 'multifield' not in self._list:
+        if 'multifield' not in self._ls_info:
             return item == self._list[0]
         return item == self._list
 

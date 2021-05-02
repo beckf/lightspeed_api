@@ -1,58 +1,32 @@
 
 from . import BaseAPI
 from ..models.customer import *
-from ..utils import search
 
 
 class CustomersAPI(BaseAPI):
-    @search(Customer)
-    def all(self, search=None, offset=0, preload_relations=[]):
-        url = f'Customer.json?offset=%d' % offset
-        if search:
-            url += "&" + search
-        data = self.client.request('GET', url)
-        return_list = self._create_forever_list(data, Customer, self.all, search, preload_relations)
-        return return_list
+    _all_methods = {
+        "": {
+            "url": "Customer.json",
+            "class": Customer
+        },
+        "customer_custom_fields": {
+            "url": "Customer/CustomField.json",
+            "class": CustomerCustomField
+        },
+        "customer_types": {
+            "url": "CustomerType.json",
+            "class": CustomerType
+        }
+    }
     
     def get_customer(self, CustomerID, preload_relations=[], raw=False):
         url = f'Customer/{CustomerID}.json'
-        if preload_relations:
-            relations_str = '","'.join(preload_relations)
-            url += f'?load_relations=["{relations_str}"]'
-        data = self.client.request('GET', url)
-        if raw:
-            return data['Customer']
-        return self._unwrap_object_to_cls(Customer, data['Customer'])
+        return self._get_wrapper(url, raw=raw, preload_relations=preload_relations, object_class=Customer)
     
-    # TODO: call tags API instead of doing it here.
-    def get_tags_for_customer(self, CustomerID):
-        data = self.client.request('GET', f'Customer/{CustomerID}.json?load_relations=["Tags"]')
-        if data is None or data['@attributes']['count'] == '0':
-            return []
-
-        return_list = []
-        tags = data['Customer'].get('Tags', None)
-        if tags:
-            if type(tags['Tag']) != list:
-                return_list = [self._unwrap_object_to_cls(Tag, tags['Tag'])]
-            else:
-                for obj in tags['Tag']:
-                    return_list.append(self._unwrap_object_to_cls(Tag, obj))
-        
-        return return_list
-    
-    def get_custom_field(self, CustomFieldID, raw=False):
-        data = self.client.request('GET', f'Customer/CustomField/{CustomFieldID}.json')
-        if data is None or data['@attributes']['count'] == '0':
-            return None
-        if raw:
-            return data['CustomField']
-        return self._unwrap_object_to_cls(CustomerCustomField, data['CustomField'])
+    def get_customer_custom_field(self, CustomFieldID, raw=False):
+        url = f'Customer/CustomField/{CustomFieldID}.json'
+        return self._get_wrapper(url, raw=raw, object_class=CustomerCustomField, object_field='CustomField')
     
     def get_customer_type(self, CustomerTypeID, raw=False):
-        data = self.client.request('GET', f'CustomerType/{CustomerTypeID}.json')
-        if data is None or data['@attributes']['count'] == '0':
-            return None
-        if raw:
-            return data['CustomerType']
-        return self._unwrap_object_to_cls(CustomerType, data['CustomerType'])
+        url = f'CustomerType/{CustomerTypeID}.json'
+        return self._get_wrapper(url, raw=raw, object_class=CustomerType)

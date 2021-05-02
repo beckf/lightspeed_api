@@ -63,7 +63,6 @@ def get_search_string(search_terms, args_dict):
         else:
             search += f"&{ls_info['ls_field']}={args_dict[term]}"
     
-    print("SEARCH: ", search[1:])
     return search[1:] if search else ""
 
 

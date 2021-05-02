@@ -1,12 +1,46 @@
 
-from ..utils import convert_to_type
+import functools
+
+from ..utils import convert_to_type, search
+
 
 class BaseAPI:
     def __init__(self, client):
         self.client = client
+        if getattr(self, '_all_methods', None):
+            for _obj_name in self._all_methods.keys():
+                obj = self._all_methods[_obj_name]
+                _name = 'all' if _obj_name == "" else 'all_%s' % _obj_name
+                _url = obj['url']
+                _class_obj = obj['class']
+                setattr(self, _name, search(_class_obj)(functools.partial(self._all_wrapper, _url, _class_obj)))
     
     def _unwrap_object_to_cls(self, objcls, obj):
         return objcls(obj, api=self.client)
+    
+    def _all_wrapper(self, _all_url, _class_obj, search=None, offset=0, preload_relations=[]):
+        url = f'%s?offset=%d' % (_all_url, offset)
+        if search:
+            url += "&" + search
+        data = self.client.request('GET', url)
+        return_list = self._create_forever_list(data, _class_obj, functools.partial(self._all_wrapper, _all_url, _class_obj), search, preload_relations)
+        return return_list
+    
+    def _get_wrapper(self, url, raw=False, preload_relations=[], object_class=None, object_field=None):
+        if preload_relations:
+            relations_str = '","'.join(preload_relations)
+            url += f'?load_relations=["{relations_str}"]'
+        data = self.client.request('GET', url)
+        
+        # TODO: figure out how this'll work without that _class_obj field
+        data_fieldname = object_class.__name__
+        data_object_class = object_class
+        if object_field:
+            data_fieldname = object_field
+        
+        if raw:
+            return data[data_fieldname]
+        return self._unwrap_object_to_cls(data_object_class, data[data_fieldname])
     
     def _create_forever_list(self, data, objcls, retrieval_func, search, preload_relations):
         return_list = []

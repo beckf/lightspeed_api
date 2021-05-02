@@ -7,11 +7,12 @@ class Tag(BaseObject):
         "name": {"type": str, "ls_field": "name"}
     }
     _get_function = "TagsAPI.get_tag"
+    _update_url = 'Customer/%s.json'
+    _create_url = 'Customer.json'
     
     def cleanup(self):
         if self.id == 0:
             _tags = self.api.tags.all(name=self.name)
-            print(_tags)
             if _tags and len(_tags) == 1:
                 self.id = _tags[0].id
 
@@ -24,8 +25,12 @@ class Tag(BaseObject):
 
     def __hash__(self):
         return hash(self.name)
+    
+    def __eq__(self, item):
+        return self.id == item.id if item.id and self.id else self.name == item.name 
 
 
+# TODO: explore this a bit more before we go do it
 class TagGroup(BaseObject):
     _object_attributes = {
         "id": {"type": int, "ls_field": "customFieldID"},

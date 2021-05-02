@@ -32,7 +32,7 @@ class CustomerCustomField(BaseObject):
         "is_archived": {"type": bool, "ls_field": "archived"},
         "default": {"type": str, "ls_field": "default"},    # TODO: may be a mixed type, so this may not work?
     }
-    _get_function = "CustomersAPI.get_custom_field"
+    _get_function = "CustomersAPI.get_customer_custom_field"
 
 
 class CustomerCustomFieldValue(BaseObject):

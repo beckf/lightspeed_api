@@ -26,8 +26,11 @@ def test_customer_create(ls_client):
 def test_customer_create_invalid(ls_client):
     customer = lightspeed_api.models.Customer()
     ls_client.api.add(customer)
-    #customer.save()            # TODO: fix this test, returns 500 error
-    assert(False)
+    try:
+        customer.save()
+        assert(False)
+    except lightspeed_api.client.HTTPServerError as ex:
+        pass        # Success case
 
 
 def test_customer_create_complex(ls_client):
@@ -65,8 +68,7 @@ def test_customer_create_complex(ls_client):
     customer.tags = [t1, t2]
     customer.note = lightspeed_api.models.Note()
     customer.note.text = "This is just a test to ensure that notes can be made!"
-
-    # TODO: phone numbers, address, website
+    
     # TODO: discount
     # TODO: custom fields?
 
@@ -83,17 +85,37 @@ def test_customer_create_complex(ls_client):
         #assert(customer.birthday == customer_copy.birthday)
         assert(customer.company == customer_copy.company)
         assert(customer.type == customer_copy.type)
-        print(customer_copy.emails)
         assert(customer.emails == customer_copy.emails)
         assert(customer.tags == customer_copy.tags)
         assert(customer.note == customer_copy.note)
-        # TODO: fix this once UTC is done [TICKET 1]
         assert(customer_copy.note.last_modified_time < datetime.utcnow())
     except AssertionError as ex:
-        #customer.delete()       # Delete if things failed.
+        customer.delete()       # Delete if things failed.
         raise ex
     
     customer.delete()
+
+
+def test_customer_all_functions(ls_client):
+    obj_list = ls_client.api.customers.all()
+    assert(len(obj_list) > 0)
+
+    obj_list = ls_client.api.customers.all_customer_types()
+    assert(len(obj_list) > 0)
+
+    obj_list = ls_client.api.customers.all_customer_custom_fields()
+    assert(len(obj_list) > 0)
+
+
+def test_customer_get_functions(ls_client):
+    obj = ls_client.api.customers.get_customer(1)
+    assert(obj is not None)
+
+    obj = ls_client.api.customers.get_customer_type(1)
+    assert(obj is not None)
+
+    obj = ls_client.api.customers.get_customer_custom_field(1)
+    assert(obj is not None)
 
 
 def test_customer_anonymize_delete(ls_client):

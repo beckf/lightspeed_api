@@ -10,3 +10,6 @@ class Note(BaseObject):
         "is_public": {"type": bool, "ls_field": "isPublic"},
         "last_modified_time": {"type": datetime, "ls_field": "timeStamp"},
     }
+
+    def __eq__(self, item):
+        return self.text == item.text
