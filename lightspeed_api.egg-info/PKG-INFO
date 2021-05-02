@@ -8,12 +8,11 @@ Author-email: forrest.beck@da.org
 License: MIT License
 Download-URL: https://github.com/beckf/lightspeed_api/archive/v.01.tar.gz
 Description: # Lightspeed HQ API Python Library
-        Gives easy access to the Lightspeed retail point of sale api.
+        Based off of https://github.com/beckf/lightspeed_api, this library improves on it and makes it super user-friendly to get complex queries and traversal of Lightspeed items without having to understand the API itself.
         
-        To use create a new object with settings in a dictionary.  Then just specify
-        the endpoints and paramaters in your request.
+        For API documentation, see: https://developers.lightspeedhq.com/retail/introduction/introduction/. Note that you can easily see what fields are available/searchable by doing a help() on the function/class you're curious about.
         
-        For API documentation see: https://developers.lightspeedhq.com/retail/introduction/introduction/
+        We do a lot of casting/lazy-loading in our system to try and conserve API calls. We've made it possible for you to run your own queries 
         
         Some examples of uses:
         
@@ -21,56 +20,40 @@ Description: # Lightspeed HQ API Python Library
         # Create a new dictionary with some settings that we will need.
         import lightspeed_api
         
-        c = {'account_id': '12345678',
+        c = {
             'client_id': 'developer_client_id',
             'client_secret': 'developer_client_secret',
             'refresh_token': 'special_refresh_token'
         }
-            
+        
         ls = lightspeed_api.Lightspeed(c)
+        client_list = ls.api.customers.all(first_name="Richard")
+        for client in client_list:          # Infinitely-scrolling lists!
+            tag_list = client.tags          # Lazy-loaded attributes as you need them!
+            for tag in tag_list:
+                items = tag.associated_items        # Extra queries associated to objects!
+                for item in items:
+                    print(item.id, item.sku)
         
-        # Get a customer record
-        ls.get('Customer/1234')
+        # Do more complex queries
+        from lightspeed_api.api.queries import _lessthan, _between, _like, _notequal, _or
+        client_list = ls.api.customers.all(id=_lessthan(300),
+                                           last_name=_like("%ich%"),
+                                           credit_account_id=_or(_between(0,10), _notequal(40)))
         
-        # Delete a customer by id number
-        ls.delete('Customer/1234')
+        # Create a new item, save it, make a change and then save it again!
+        from lightspeed_api.api.customers import Customer
+        cust = Customer()
+        cust.first_name = "Richard"
+        cust.last_name = "Desmarais"
+        cust.save()
         
-        # Create a new customer
-        formatted = {'Customer':
-                        {'firstName': 'Joe',
-                         'lastName': 'Smith',
-                         'companyRegistrationNumber': '1234',
-                         'customerTypeID': 1,
-                         'Contact': {
-                             'custom': '',
-                             'noEmail': 'false',
-                             'noPhone': 'false',
-                             'noMail': 'false',
-                             'Emails': {
-                                 'ContactEmail': {
-                                     'address': 'joe.smith@company.com',
-                                     'useType': 'Primary'
-                                 }
-                             },
-                             'Addresses': {
-                                 'ContactAddress': {
-                                     'address1': '1212 Street Drive',
-                                     'address2': '',
-                                     'city': 'New York',
-                                     'state': 'New York',
-                                     'zip': '12345',
-                                     'country': 'USA',
-                                     'countryCode': '',
-                                     'stateCode': ''
-                                 }
-                             }
-                         },
-                         }
-                    }
-        ls.create("Customer", formatted["Customer"])
+        print(cust.id)      # Returns a new ID value
         
+        cust.credit_account_id = 2
+        cust.save()
         
-        
+        print(cust.id)      # Same ID value as above, object has been updated
         ```
 Keywords: Lightspeed,HQ,API,POS
 Platform: UNKNOWN

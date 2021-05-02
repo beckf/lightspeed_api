@@ -1,5 +1,6 @@
 
-from . import BaseAPI, BaseObject
+from . import BaseAPI
+
 
 class AccountsAPI(BaseAPI):
     def get_account_id(self):

@@ -11,6 +11,10 @@ __author__ = "Forrest Beck"
 __credits__ = ["Richard Desmarais"]
 
 
+class HTTPServerError(Exception):
+    pass
+
+
 class Lightspeed(object):
 
     def __init__(self, config):
@@ -152,8 +156,9 @@ class Lightspeed(object):
                 self.rate_limit_bucket_rate = int(s.headers['X-LS-API-Drip-Rate'])
 
                 return s.json()
+            elif s.status_code >= 500 and s.status_code < 600:
+                raise HTTPServerError(s.json()['message'])
             else:
-                print(s.json())
                 return None
 
         except requests.exceptions.HTTPError as e:
