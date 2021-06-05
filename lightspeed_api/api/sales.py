@@ -1,7 +1,7 @@
 
 import json
 from . import BaseAPI
-from ..models.sale import Sale, SaleLineItem
+from ..models.sale import Sale, SaleLine
     
 
 class SalesAPI(BaseAPI):
@@ -36,7 +36,7 @@ class SalesAPI(BaseAPI):
         
         return_list = []
         for obj in data['SaleLine']:
-            return_list.append(self._unwrap_sales_object(SaleLineItem, obj))
+            return_list.append(self._unwrap_sales_object(SaleLine, obj))
         
         return return_list
     

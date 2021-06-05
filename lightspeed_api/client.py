@@ -60,7 +60,6 @@ class Lightspeed(object):
             r = s.post(self.token_url, data=payload)
             json = r.json()
 
-            print(json)
             self.bearer_token = json["access_token"]
             self.session.headers.update({'Authorization': 'Bearer ' + self.bearer_token})
 
@@ -75,7 +74,6 @@ class Lightspeed(object):
         :return:
         """
         if datetime.datetime.now() > self.token_expire_time:
-
             s = requests.Session()
 
             try:

@@ -14,49 +14,25 @@ class Item(BaseObject):
         "manufacturer_sku": {"type": str, "ls_field": "manufacturerSku"},
         "default_cost": {"type": float, "ls_field": "defaultCost"},
         "average_cost": {"type": float, "ls_field": "avgCost"},
-        "taxed": {"type": bool, "ls_field": "tax"},
-        "archived": {"type": bool, "ls_field": "archived"},
-        "discountable": {"type": bool, "ls_field": "discountable"},
-        "serialized": {"type": bool, "ls_field": "serialized"},
-        "added_to_ecom": {"type": bool, "ls_field": "publishToEcom"},
+        "is_taxed": {"type": bool, "ls_field": "tax"},
+        "is_archived": {"type": bool, "ls_field": "archived"},
+        "is_discountable": {"type": bool, "ls_field": "discountable"},
+        "is_serialized": {"type": bool, "ls_field": "serialized"},
+        "is_publishable_to_ecom": {"type": bool, "ls_field": "publishToEcom"},
         "type": {"type": str, "ls_field": "systemSku"},     # TODO: handle enum values: default, non_inventory, serialized, box, serialized_assembly, assembly
         "description": {"type": str, "ls_field": "description"},
         "last_modified_time": {"type": datetime, "ls_field": "timeStamp"},
         "created_time": {"type": datetime, "ls_field": "createTime"},
         "tags": {"type": Tag, "multifield": True, "ls_field": "Tags.tag", "relationships": ["TagRelations.Tag"]},
-        # TODO: make these map to objects dynamically instead of just an ID
-        "category_id": {"type": int, "ls_field": "categoryID"},
-        "item_matrix_id": {"type": int, "ls_field": "itemMatrixID"},
-        "manufacturer_id": {"type": int, "ls_field": "manufacturerID"},
-        "tax_class_id": {"type": int, "ls_field": "taxClassID"},
-        "default_vendor_id": {"type": int, "ls_field": "defaultVendorID"},
-        # TODO: Note field
-        # TODO: Category, TaxClass, ItemAttributes, Manufacturer, ItemShops,
-        #       ItemComponents, ItemShelfLocations, ItemVendorNums fields
-        # TODO: CustomFieldValues field
+        "category": {"type": 'Category', "ls_field": "categoryID", "relationships": ["Category"]},
+        "item_matrix": {"type": 'ItemMatrix', "ls_field": "itemMatrixID"},
+        "manufacturer": {"type": 'Manufacturer', "ls_field": "manufacturerID", "relationships": ["Manufacturer"]},
+        "tax_class": {"type": 'TaxClass', "ls_field": "taxClassID", "relationships": ["TaxClass"]},
+        "default_vendor": {"type": "Vendor", "ls_field": "defaultVendorID"},
+        # TODO: Images, ItemAttributes, ItemShops, ItemComponents, ItemShelfLocations, ItemVendorNums fields
+        "note": {"type": 'Note', "ls_field": "Note", "relationships": ["Note"], 'optional': True},
+        "custom_fields": {"type": 'ItemCustomFieldValue', "multifield": True, "ls_field": "CustomFieldValues.CustomFieldValue", "relationships": ["CustomFieldValues", "CustomFieldValues.value"]},
     }
-    def __init__(self, obj=None, api=None):
-        if obj:
-            # TODO: figure out if fields (like self.name) are just references to fields in the JSON blob or extracted as-is
-            self.id = obj['itemID']
-            self.created_at = obj['createTime']
-            self.name = obj['description']
-            self.tags = []
-            self.json_object = obj
-    
-    # TODO: move this + setter into BaseObject
-    # TODO: setter function should have format function to set up the object (i.e. converting from str to obj)?
-    @property
-    def tags(self):
-        if not self._tags:
-            self._tags = self.api.items.get_tags_for_item(self.id)
-        return self._tags        # TODO: return list object that allows you to add/delete from the list via just a string (instead of a tag object)?
-    
-    @tags.setter
-    def tags(self, tags):
-        self._tags = []
-        for t in tags:
-            self._tags.append(Tag({"name": t, "tagID": None}))
 
     def get_associated_sales(self, created_at=None):
         return self.api.sales.get_sales_for_item(self.id, created_at=created_at)
@@ -64,26 +40,67 @@ class Item(BaseObject):
     def __repr__(self):
         return self.name
 
+    # TODO: get_image function
 
 class ItemCustomField(BaseObject):
     _object_attributes = {
         "id": {"type": int, "ls_field": "customFieldID"},
+        "name": {"type": str, "ls_field": "name"},
+        "type": {"type": str, "ls_field": "type"},
+        "units": {"type": str, "ls_field": "uom"},
+        "decimal_precision": {"type": int, "ls_field": "decimalPrecision"},
+        "is_archived": {"type": bool, "ls_field": "archived"},
+        "default": {"type": str, "ls_field": "default"},    # TODO: may be a mixed type, so this may not work?
+    }
+
+
+class ItemCustomFieldValue(BaseObject):
+    _object_attributes = {
+        "id": {"type": int, "ls_field": "customFieldValueID"},
+        "custom_field": {"type": 'ItemCustomField', "ls_field_id": "customFieldID"},
+        "is_deleted": {"type": bool, "ls_field": "deleted"},
+        "name": {"type": str, "ls_field": "name"},
+        "type": {"type": str, "ls_field": "type"},      # TODO: do we want to convert this to a Python type?
+        "value": {"type": str, "ls_field": "value"},    # TODO: do we want to convert this to its Python type?
     }
 
 
 class ItemCustomFieldChoice(BaseObject):
-    _object_attributes = {
-        "id": {"type": int, "ls_field": "customFieldID"},
+    _object_attributes = {      # TODO: same as customer?
+        "id": {"type": int, "ls_field": "customFieldChoiceID"},
+        "name": {"type": str, "ls_field": "name"},
+        "value": {"type": str, "ls_field": "value"},
+        "is_deletable": {"type": bool, "ls_field": "canBeDeleted"},
+        "custom_field": {"type": 'ItemCustomField', "ls_field_id": "customFieldID"},
     }
 
 
 class ItemAttributeSet(BaseObject):
     _object_attributes = {
-        "id": {"type": int, "ls_field": "customFieldID"},
+        "id": {"type": int, "ls_field": "itemAttributeSetID"},
+        "name": {"type": str, "ls_field": "name"},
+        "attribute_1": {"type": str, "ls_field": "attributeName1"},
+        "attribute_2": {"type": str, "ls_field": "attributeName2"},
+        "attribute_3": {"type": str, "ls_field": "attributeName3"},
     }
 
 
 class ItemMatrix(BaseObject):
     _object_attributes = {
-        "id": {"type": int, "ls_field": "customFieldID"},
+        "id": {"type": int, "ls_field": "itemMatrixID"},
+        "default_cost": {"type": float, "ls_field": "defaultCost"},
+        "is_taxed": {"type": bool, "ls_field": "tax"},
+        "is_archived": {"type": bool, "ls_field": "archived"},
+        "is_serialized": {"type": bool, "ls_field": "serialized"},
+        "type": {"type": str, "ls_field": "systemSku"},     # TODO: handle enum values: default, non_inventory, serialized, box, serialized_assembly, assembly
+        "description": {"type": str, "ls_field": "description"},
+        "last_modified_time": {"type": datetime, "ls_field": "timeStamp"},
+        "category": {"type": 'Category', "ls_field": "categoryID", "relationships": ["Category"]},
+        "manufacturer": {"type": 'Manufacturer', "ls_field": "manufacturerID", "relationships": ["Manufacturer"]},
+        "tax_class": {"type": 'TaxClass', "ls_field": "taxClassID", "relationships": ["TaxClass"]},
+        "default_vendor": {"type": "Vendor", "ls_field": "defaultVendorID"},
+        "item_attributes": {"type": 'ItemAttributeSet', "ls_field": "itemAttributeSetID", "relationships": ["ItemAttributeSet"]},
+        "items": {"type": 'Item', "multifield": True, "ls_field": "Items.Item", "relationships": ["Items"]},
+        "custom_fields": {"type": 'ItemCustomFieldValue', "multifield": True, "ls_field": "CustomFieldValues.CustomFieldValue", "relationships": ["CustomFieldValues", "CustomFieldValues.value"]},
     }
+    # TODO: images attribute

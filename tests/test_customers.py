@@ -1,5 +1,6 @@
 
-from datetime import datetime
+import json
+from datetime import datetime, timedelta
 
 import lightspeed_api
 
@@ -42,15 +43,16 @@ def test_customer_create_complex(ls_client):
     customer.company = "Home Depot"
     customer.type = ls_client.api.customers.get_customer_type(1)
 
+    customer.contact = lightspeed_api.models.Contact()
     email1 = lightspeed_api.models.CustomerEmail("tst@hdepot.com", lightspeed_api.models.CustomerEmailType.PRIMARY)
     email2 = lightspeed_api.models.CustomerEmail("someotheremail@fakenews.com", lightspeed_api.models.CustomerEmailType.SECONDARY)
-    customer.emails = [email1, email2]
+    customer.contact.emails = [email1, email2]
 
     phone1 = lightspeed_api.models.CustomerPhoneNumber("+16138311828", lightspeed_api.models.CustomerPhoneNumberType.WORK)
     phone2 = lightspeed_api.models.CustomerPhoneNumber("6131234567", lightspeed_api.models.CustomerPhoneNumberType.FAX)
-    customer.phone_numbers = [phone1, phone2]
+    customer.contact.phone_numbers = [phone1, phone2]
 
-    customer.website = "www.google.com"
+    customer.contact.website = "www.google.com"
     
     address1 = lightspeed_api.models.CustomerAddress()
     address1.address_line_1 = "123 Fake St"
@@ -59,7 +61,7 @@ def test_customer_create_complex(ls_client):
     address1.state = "Ontario"
     address1.country = "Canada"
     address1.zipcode = "A1A 1A1"
-    customer.addresses.append(address1)
+    customer.contact.addresses.append(address1)
 
     t1 = lightspeed_api.models.Tag()
     t1.name = "fullprofile"
@@ -85,10 +87,10 @@ def test_customer_create_complex(ls_client):
         #assert(customer.birthday == customer_copy.birthday)
         assert(customer.company == customer_copy.company)
         assert(customer.type == customer_copy.type)
-        assert(customer.emails == customer_copy.emails)
+        assert(customer.contact.emails == customer_copy.contact.emails)
         assert(customer.tags == customer_copy.tags)
         assert(customer.note == customer_copy.note)
-        assert(customer_copy.note.last_modified_time < datetime.utcnow())
+        assert(customer_copy.note.last_modified_time < (datetime.utcnow() + timedelta(seconds=10)))      # time on server may be skewed a few seconds
     except AssertionError as ex:
         customer.delete()       # Delete if things failed.
         raise ex
@@ -139,15 +141,15 @@ def test_customer_get_created_from_ls(ls_client):
     assert(customer.type is not None)
     assert(customer.type.id == 1)
     
-    assert(len(customer.emails) == 2)
-    for t in customer.emails:
+    assert(len(customer.contact.emails) == 2)
+    for t in customer.contact.emails:
         assert(t is not None)
         assert(t.address is not None)
         assert(t.type == lightspeed_api.models.CustomerEmailType.PRIMARY or
                 t.type == lightspeed_api.models.CustomerEmailType.SECONDARY)
     
-    assert(len(customer.phone_numbers) == 5)
-    for t in customer.phone_numbers:
+    assert(len(customer.contact.phone_numbers) == 5)
+    for t in customer.contact.phone_numbers:
         assert(t is not None)
         assert(t.number is not None)
         if t.number == "1111111111":
@@ -163,8 +165,8 @@ def test_customer_get_created_from_ls(ls_client):
         else:
             assert(False)
 
-    assert(len(customer.addresses) == 1)
-    for t in customer.addresses:
+    assert(len(customer.contact.addresses) == 1)
+    for t in customer.contact.addresses:
         assert(t is not None)
         assert(t.address_line_1 == "1 Wellington St")
         assert(t.address_line_2 == "ATTN: Someone")
@@ -177,7 +179,7 @@ def test_customer_get_created_from_ls(ls_client):
     for t in customer.tags:
         assert(t.id)
 
-    assert(customer.website == "www.canada.ca")
+    assert(customer.contact.website == "www.canada.ca")
     assert(customer.credit_account is not None)
     assert(customer.discount is not None)
     assert(customer.discount.id == 1)
@@ -206,6 +208,13 @@ def test_customer_get_created_from_ls(ls_client):
     assert(customer.last_name == "Desmarais")
     assert(customer.name == "Richard Desmarais")
     assert(customer.company == "Dayna's Pet Sitting")
+
+    # Make sure what we get in JSON format is the same as we expect to send back
+    raw_obj = ls_client.api.customers.get_customer(customer.id, raw=True)
+    raw_local_obj = json.loads(customer.json())
+    #for f in raw_obj:
+        #assert(f in raw_local_obj)
+        #assert(raw_obj[f] == raw_local_obj[f])
 
 
 def test_customer_check_types_from_ls(ls_client):

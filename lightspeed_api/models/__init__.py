@@ -6,6 +6,14 @@ from ..api import BaseAPI
 
 # Lazy-loaded
 API_MODULES = None
+API_MODELS = None
+
+
+def _get_model_class(class_name):
+    global API_MODELS
+    if not API_MODELS:
+        API_MODELS = __import__('lightspeed_api').models
+    return getattr(API_MODELS, class_name)
 
 
 class BaseObject:
@@ -27,10 +35,14 @@ class BaseObject:
                             if _id == 0:
                                 data = None
                             else:
-                                # TODO: figure out how this is going to work, want it to replace the value with the object when done.
                                 data = LazyLookupObject(_id, api, _class, self, term)
                         else:
-                            data = convert_to_type(ls_info['type'], obj[ls_info['ls_field']])
+                            obj_data = BaseObject._parse_field_parts(ls_info['ls_field'], obj, True)
+                            if obj_data is None:
+                                raise KeyError()       # triggers the relationships part below
+                            if 'ls_secondary_field' in ls_info:
+                                obj_data = obj_data[ls_info['ls_secondary_field']]
+                            data = convert_to_type(ls_info['type'], obj_data)
 
                         if 'convert_class' in ls_info:
                             data = ls_info['convert_class'](data)
@@ -45,10 +57,10 @@ class BaseObject:
                                 _data_list.append(ls_info['convert_class'](d))
                             data_list = _data_list
 
-                        if data_list:
-                            setattr(self, term, data_list)
-                        else:
+                        if not data_list and "relationships" in ls_info:
                             setattr(self, term, LazyLookupAttributes(self.id, api, self._get_function, ls_info))
+                        else:
+                            setattr(self, term, data_list)
                 except KeyError as ex:
                     if not ('optional' in ls_info and ls_info['optional']):
                         raise ex
@@ -64,19 +76,19 @@ class BaseObject:
                 # Only dealing with combined fields now
                 if "combine" not in ls_info:
                     continue
-                
+
                 values = []
                 for attr in ls_info['combine']:
                     values.append(getattr(self, attr))
-                
+
                 setattr(self, term, " ".join(values))
-            
+
             # Run the "cleanup" function if specified.
             # Used to make some last-minute queries/adjustments if needed.
             _cleanup = getattr(self, 'cleanup', None)
             if _cleanup and callable(_cleanup):
                 _cleanup()
-            
+
         else:
             for term in self._object_attributes:
                 ls_info = self._object_attributes[term]
@@ -84,36 +96,43 @@ class BaseObject:
 
                 if "multifield" in ls_info and ls_info['multifield']:
                     data = []
-                
+
                 data = ls_info.get('default', data)
                 setattr(self, term, data)
 
     @staticmethod
-    def _parse_multifield(ls_info, obj, api):
-        data_list = []
-        parts = ls_info['ls_field'].split('.')
+    def _parse_field_parts(ls_field, obj, notlist=False):
+        parts = ls_field.split('.')
         downstream_obj = obj
         for p in parts:
             # This happens when there is no data - a list/dict becomes an empty string.
             # If so, we'll exit out and assume there is no data.
             if type(downstream_obj) == str or p not in downstream_obj:
-                downstream_obj = []
+                downstream_obj = [] if not notlist else None
                 break
             downstream_obj = downstream_obj[p]
         
+        return downstream_obj
+
+    @staticmethod
+    def _parse_multifield(ls_info, obj, api):
+        data_list = []
+        downstream_obj = BaseObject._parse_field_parts(ls_info['ls_field'], obj)
+
         second_field = None
         if 'ls_secondary_field' in ls_info:
             second_field = ls_info['ls_secondary_field']
-        
+
         # Only a single element in the "list"
         if type(downstream_obj) == dict:
             downstream_obj = [downstream_obj]
-        
+
         for item in downstream_obj:
             if second_field:
                 data = convert_to_type(ls_info['type'], item[second_field])
-            elif issubclass(ls_info['type'], BaseObject):
-                data = ls_info['type'](item, api)
+            elif type(ls_info['type']) == str:          # Means it's an object/class
+                _class = _get_model_class(ls_info['type'])
+                data = _class(item, api)
             else:
                 raise Exception("Unexpected combination - multifield item, no ls_secondary_field or typecasting")
             data_list.append(data)
@@ -129,7 +148,7 @@ class BaseObject:
             if "combine" in ls_info:
                 continue
             
-            field = ls_info['ls_field']
+            field = ls_info.get('ls_field', ls_info.get('ls_field_id', None))
             _obj = obj
             if len(field.split(".")) > 1:
                 fields = field.split(".")
@@ -178,24 +197,29 @@ class BaseObject:
         self.api = api
     
     def save(self):
-        print(self.json())
         if self.id:
-            url = getattr(self, '_update_url')
+            url = getattr(self, '_update_url', None)
             if url:
                 self.api.request('PUT', url % self.id, self.json())
             else:
-                raise Exception('No _update_url attribute associated to this class - failing!')
+                raise Exception("Unable to save changes of this object type - API doesn't handle it.")
         else:
-            url = getattr(self, '_create_url')
+            url = getattr(self, '_create_url', None)
             if url:
                 response = self.api.request('POST', url, self.json())
             else:
-                raise Exception('No _create_url attribute associated to this class - failing!')
+                raise Exception("Unable to create objects of this type - API doesn't handle it.")
+            
+            if not response:
+                raise Exception("No object returned from Lightspeed - invalid object creation attempted.")
             
             response.pop('@attributes')
             key = list(response.keys())[0]
             self.id = response[key][self._object_attributes['id']['ls_field']]
     
+    def delete(self):
+        raise Exception("Cannot delete this object type - API doesn't handle it.")
+
     def __eq__(self, item):
         if type(item) in [type(self), LazyLookupObject]:
             if 'id' not in self._object_attributes or not getattr(item, 'id', None):
@@ -209,7 +233,7 @@ class LazyLookupObject:
     def __init__(self, id, client, class_obj, parent_obj, parent_field):
         self.id = id
         self._client = client
-        self._class_obj = class_obj
+        self._class_obj = _get_model_class(class_obj)
         self._parent_obj = parent_obj
         self._parent_field = parent_field
         self._was_loaded = False
@@ -237,7 +261,7 @@ class LazyLookupObject:
         if attr != '_was_loaded':
             if '_was_loaded' in self.__dict__ and not self.__dict__['_was_loaded']:
                 self._load()
-                return getattr(self._parent_obj, attr)
+                return getattr(getattr(self._parent_obj, self._parent_field), attr)
         
         return self.__dict__[attr]
     
@@ -245,7 +269,7 @@ class LazyLookupObject:
         if attr != '_was_loaded':
             if '_was_loaded' in self.__dict__ and not self.__dict__['_was_loaded']:
                 self._load()
-                return setattr(self._parent_obj, attr, val)
+                return setattr(getattr(self._parent_obj, self._parent_field), attr, val)
         
         return super().__setattr__(attr, val)
 
@@ -333,6 +357,7 @@ class LazyLookupAttributes:
 # Done after declaring the above class
 from .catalog import *
 from .category import *
+from .contact import *
 from .credit_account import *
 from .credit_card import *
 from .customer import *
@@ -357,4 +382,5 @@ from .shipping import *
 from .shop import *
 from .tag import *
 from .tax import *
+from .vendor import *
 from .workorder import *

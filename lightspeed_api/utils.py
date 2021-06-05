@@ -19,6 +19,11 @@ def convert_to_type(obj_type, obj):
             return int(obj)
         except ValueError:
             raise Exception("The value %s could not be converted to a number" % obj)
+    elif obj_type == float:
+        try:
+            return float(obj)
+        except ValueError:
+            raise Exception("The value %s could not be converted to a floating-point integer" % obj)
     elif obj_type == datetime:
         try:
             dtobj = datetime.strptime(obj, LIGHTSPEED_DATETIME_FORMAT)
@@ -41,6 +46,10 @@ def convert_from_type(obj_type, obj):
         return str(obj)         # Done to force conversion of Object to str if applicable
     elif obj_type == int:
         return str(obj)
+    elif obj_type == float:
+        return str(obj)
+    elif obj_type == bool:
+        return "true" if obj else "false"
     elif obj_type in [datetime, date]:
         try:
             dtobj = datetime.strftime(obj, LIGHTSPEED_DATETIME_FORMAT)

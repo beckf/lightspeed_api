@@ -3,11 +3,6 @@ from datetime import datetime, date
 from enum import Enum
 
 from . import BaseObject
-from .credit_account import CreditAccount
-from .discount import Discount
-from .note import Note
-from .tag import Tag
-from .tax import TaxCategory
 
 from ..api import ClientAPI
 
@@ -16,8 +11,8 @@ class CustomerType(BaseObject):
     _object_attributes = {
         "id": {"type": int, "ls_field": "customerTypeID"},
         "name": {"type": str, "ls_field": "name"},
-        "tax_category": {"type": TaxCategory, "ls_field": "TaxCategory", "ls_field_id": "taxCategoryID", "relationships": ["TaxCategory"]},     # TODO: there are TaxCategory.TaxCategoryClasses and TaxCategory.TaxCategoryClasses.TaxClass relationships for this item too - should we load them all?
-        "discount": {"type": Discount, "ls_field": "Discount", "ls_field_id": "discountID", "relationships": ["Discount"]}
+        "tax_category": {"type": 'TaxCategory', "ls_field": "TaxCategory", "ls_field_id": "taxCategoryID", "relationships": ["TaxCategory"]},     # TODO: there are TaxCategory.TaxCategoryClasses and TaxCategory.TaxCategoryClasses.TaxClass relationships for this item too - should we load them all?
+        "discount": {"type": 'Discount', "ls_field": "Discount", "ls_field_id": "discountID", "relationships": ["Discount"]}
     }
     _get_function = "CustomersAPI.get_customer_type"
 
@@ -38,7 +33,8 @@ class CustomerCustomField(BaseObject):
 class CustomerCustomFieldValue(BaseObject):
     _object_attributes = {
         "id": {"type": int, "ls_field": "customFieldValueID"},
-        "custom_field": {"type": CustomerCustomField, "ls_field_id": "customFieldID"},
+        "custom_field": {"type": 'CustomerCustomField', "ls_field_id": "customFieldID"},
+        #"is_deleted": {"type": bool, "ls_field": "deleted"},
         "name": {"type": str, "ls_field": "name"},
         "type": {"type": str, "ls_field": "type"},      # TODO: do we want to convert this to a Python type?
         "value": {"type": str, "ls_field": "value"},    # TODO: do we want to convert this to its Python type?
@@ -47,7 +43,11 @@ class CustomerCustomFieldValue(BaseObject):
 
 class CustomerCustomFieldChoice(BaseObject):
     _object_attributes = {
-        "id": {"type": int, "ls_field": "customFieldID"},
+        "id": {"type": int, "ls_field": "customFieldChoiceID"},
+        "name": {"type": str, "ls_field": "name"},
+        "value": {"type": str, "ls_field": "value"},
+        "is_deletable": {"type": bool, "ls_field": "canBeDeleted"},
+        "custom_field": {"type": 'CustomerCustomField', "ls_field_id": "customFieldID"},
     }
 
 
@@ -125,17 +125,14 @@ class Customer(BaseObject):
         "vat_number": {"type": str, "ls_field": "vatNumber"},
         "created_time": {"type": datetime, "ls_field": "createTime"},
         "last_modified_time": {"type": datetime, "ls_field": "timeStamp"},
-        "emails": {"type": CustomerEmail, "multifield": True, "ls_field": "Contact.Emails.ContactEmail", "relationships": ["Contact"]},
-        "phone_numbers": {"type": CustomerPhoneNumber, "multifield": True, "ls_field": "Contact.Phones.ContactPhone", "relationships": ["Contact"]},
-        "addresses": {"type": CustomerAddress, "multifield": True, "ls_field": "Contact.Addresses.ContactAddress", "relationships": ["Contact"]},
-        "website": {"type": str, "ls_field": "Contact.Websites.ContactWebsite", "ls_secondary_field": "url", "optional": True, "relationships": ["Contact"]},
-        "tags": {"type": Tag, "multifield": True, "ls_field": "Tags.Tag", "relationships": ["Tags"]},
-        "credit_account": {"type": CreditAccount, "ls_field": "CreditAccount", "ls_field_id": "creditAccountID", "relationships": ["CreditAccount"]},
-        "type": {"type": CustomerType, "ls_field": "CustomerType", "ls_field_id": "customerTypeID", "relationships": ["CustomerType"]},
-        "discount": {"type": Discount, "ls_field": "Discount", "ls_field_id": "discountID", "relationships": ["Discount"]},
-        "tax_category": {"type": TaxCategory, "ls_field": "TaxCategory", "ls_field_id": "taxCategoryID", "relationships": ["TaxCategory"]},
-        "note": {"type": Note, "ls_field": "Note", "relationships": ["Note"], 'optional': True},
-        "custom_fields": {"type": CustomerCustomFieldValue, "multifield": True, "ls_field": "CustomFieldValues.CustomFieldValue", "relationships": ["CustomFieldValues", "CustomFieldValues.value"]},
+        "contact": {"type": 'Contact', 'optional': True, "ls_field": "Contact", "relationships": ["Contact"]},
+        "tags": {"type": 'Tag', "multifield": True, "ls_field": "Tags.Tag", "relationships": ["Tags"]},
+        "credit_account": {"type": 'CreditAccount', "ls_field": "CreditAccount", "ls_field_id": "creditAccountID", "relationships": ["CreditAccount"]},
+        "type": {"type": 'CustomerType', "ls_field": "CustomerType", "ls_field_id": "customerTypeID", "relationships": ["CustomerType"]},
+        "discount": {"type": 'Discount', "ls_field": "Discount", "ls_field_id": "discountID", "relationships": ["Discount"]},
+        "tax_category": {"type": 'TaxCategory', "ls_field": "TaxCategory", "ls_field_id": "taxCategoryID", "relationships": ["TaxCategory"]},
+        "note": {"type": 'Note', "ls_field": "Note", "relationships": ["Note"], 'optional': True},
+        "custom_fields": {"type": 'CustomerCustomFieldValue', "multifield": True, "ls_field": "CustomFieldValues.CustomFieldValue", "relationships": ["CustomFieldValues", "CustomFieldValues.value"]},
     }
     _get_function = "CustomersAPI.get_customer"
     _update_url = 'Customer/%s.json'

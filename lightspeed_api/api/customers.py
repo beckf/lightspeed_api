@@ -19,14 +19,14 @@ class CustomersAPI(BaseAPI):
         }
     }
     
-    def get_customer(self, CustomerID, preload_relations=[], raw=False):
-        url = f'Customer/{CustomerID}.json'
+    def get_customer(self, id, preload_relations=[], raw=False):
+        url = f'Customer/{id}.json'
         return self._get_wrapper(url, raw=raw, preload_relations=preload_relations, object_class=Customer)
     
-    def get_customer_custom_field(self, CustomFieldID, raw=False):
-        url = f'Customer/CustomField/{CustomFieldID}.json'
+    def get_customer_custom_field(self, id, preload_relations=[], raw=False):
+        url = f'Customer/CustomField/{id}.json'
         return self._get_wrapper(url, raw=raw, object_class=CustomerCustomField, object_field='CustomField')
     
-    def get_customer_type(self, CustomerTypeID, raw=False):
-        url = f'CustomerType/{CustomerTypeID}.json'
+    def get_customer_type(self, id, preload_relations=[], raw=False):
+        url = f'CustomerType/{id}.json'
         return self._get_wrapper(url, raw=raw, object_class=CustomerType)

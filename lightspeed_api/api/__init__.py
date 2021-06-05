@@ -40,6 +40,8 @@ class BaseAPI:
         
         if raw:
             return data[data_fieldname]
+        if not data:
+            return None
         return self._unwrap_object_to_cls(data_object_class, data[data_fieldname])
     
     def _create_forever_list(self, data, objcls, retrieval_func, search, preload_relations):
@@ -79,6 +81,8 @@ class ClientAPI:
         self.tags_api = TagsAPI(self)
         self.customers_api = CustomersAPI(self)
         self.registers_api = RegistersAPI(self)
+        self.workorders_api = WorkordersAPI(self)
+        self.vendors_api = VendorsAPI(self)
 
         self.account_id = self.account.get_account_id()
     
@@ -126,6 +130,14 @@ class ClientAPI:
     @property
     def orders(self):
         return None
+    
+    @property
+    def vendors(self):
+        return self.vendors_api
+
+    @property
+    def workorders(self):
+        return self.workorders_api
 
 
 class LazyLookupList:
@@ -158,3 +170,5 @@ from .accounts import AccountsAPI
 from .tags import TagsAPI
 from .customers import CustomersAPI
 from .registers import RegistersAPI
+from .workorders import WorkordersAPI
+from .vendors import VendorsAPI

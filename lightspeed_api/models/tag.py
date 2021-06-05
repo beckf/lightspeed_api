@@ -31,6 +31,7 @@ class Tag(BaseObject):
 
 
 # TODO: explore this a bit more before we go do it
+# Unsure of what it will do/have (it's an XML format?)
 class TagGroup(BaseObject):
     _object_attributes = {
         "id": {"type": int, "ls_field": "customFieldID"},
