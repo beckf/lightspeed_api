@@ -1,6 +1,5 @@
 import requests
 import datetime
-import math
 import json
 import time
 from urllib import parse
@@ -19,7 +18,7 @@ class Lightspeed(object):
 
         self.token_url = "https://cloud.lightspeedapp.com/oauth/access_token.php"
         if "account_id" in config:
-            self.api_url = "https://api.lightspeedapp.com/API/Account/" + config["account_id"] + "/"
+            self.api_url = "https://api.lightspeedapp.com/API/V3/Account/" + config["account_id"] + "/"
         else:
             self.api_url = ""
         # Initialize token as expired.
@@ -167,21 +166,18 @@ class Lightspeed(object):
 
         r = self.request_bucket("get", url)
 
-        if int(r['@attributes']['count']) >= 100:
-            page_count = math.ceil(int(r['@attributes']['count']) / 100)
-            page = 1
-            offset = 0
-            while page <= page_count:
-                if page > 1:
-                    offset += 100
-                    p = self.request_bucket("get", url + "&offset=" + str(offset))
+        if r['@attributes']['next']:
+            next_page = r['@attributes']['next']
+            while True:
+                p = self.request_bucket("get", next_page)
+                next_page = p['@attributes']['next']
+                # Append new data to original request
+                for i in p:
+                    if type(p[i]) == list:
+                        r[i].extend(p[i])
 
-                    # Append new data to original request
-                    for i in p:
-                        if type(p[i]) == list:
-                            r[i].extend(p[i])
-
-                page += 1
+                if not next_page:
+                    break
         return r
 
     def create(self, source, data, parameters=None):

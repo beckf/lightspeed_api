@@ -1,8 +1,10 @@
 # Lightspeed HQ API Python Library
+**Updated for Lightspeed API V3**
+
 Gives easy access to the Lightspeed retail point of sale api.
 
 To use create a new object with settings in a dictionary.  Then just specify
-the endpoints and paramaters in your request.
+the endpoints and parameters in your request.
 
 For API documentation see: https://developers.lightspeedhq.com/retail/introduction/introduction/
 
