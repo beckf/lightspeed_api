@@ -166,18 +166,19 @@ class Lightspeed(object):
 
         r = self.request_bucket("get", url)
 
-        if r['@attributes']['next']:
-            next_page = r['@attributes']['next']
-            while True:
-                p = self.request_bucket("get", next_page)
-                next_page = p['@attributes']['next']
-                # Append new data to original request
-                for i in p:
-                    if type(p[i]) == list:
-                        r[i].extend(p[i])
+        if r:
+            if r['@attributes']['next']:
+                next_page = r['@attributes']['next']
+                while True:
+                    p = self.request_bucket("get", next_page)
+                    next_page = p['@attributes']['next']
+                    # Append new data to original request
+                    for i in p:
+                        if type(p[i]) == list:
+                            r[i].extend(p[i])
 
-                if not next_page:
-                    break
+                    if not next_page:
+                        break
         return r
 
     def create(self, source, data, parameters=None):
