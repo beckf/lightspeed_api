@@ -118,13 +118,13 @@ class Lightspeed(object):
         try:
             tries = 0
             while tries <= 3:
-                if method is "post":
+                if method == "post":
                     s = self.session.post(url, data=data)
-                elif method is "put":
+                elif method == "put":
                     s = self.session.put(url, data=data)
-                elif method is "delete":
+                elif method == "delete":
                     s = self.session.delete(url)
-                elif method is "get":
+                elif method == "get":
                     s = self.session.get(url)
                 # Watch for too many requests status
                 if s.status_code == 429:
